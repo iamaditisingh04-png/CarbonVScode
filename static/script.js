@@ -1,230 +1,229 @@
+/* =========================================================
+   CARBONVSCODE
+   MCQ GAME ENGINE
+========================================================= */
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
 let game = {
-
     round: 0,
-
     score: 0,
-
     time: 30,
-
     timer: null,
-
     question: null,
-
     twist: null,
-
+    selectedOption: null,
     shields: 1,
-
     doublePoints: false
-
 };
 
 
-/* =========================
+/* =========================================================
    ROUND SETTINGS
-========================= */
+========================================================= */
 
 const rounds = [
-
     {
         name: "Question Rush",
         time: 30
     },
-
     {
         name: "Twist Attack",
         time: 30
     },
-
     {
         name: "Chaos Round",
         time: 35
     },
-
     {
         name: "AI Battle",
         time: 45
     },
-
     {
         name: "Risk Round",
         time: 25
     },
-
     {
         name: "FINAL BOSS",
         time: 60
     }
-
 ];
 
 
-/* =========================
+/* =========================================================
    TWISTS
-========================= */
+========================================================= */
 
 const twists = [
-
     ["🤖", "Robot Mode", "style"],
-
     ["🎬", "Movie Trailer Mode", "style"],
-
     ["📺", "Breaking News Mode", "style"],
-
     ["🧑‍🏫", "Professor Mode", "style"],
-
     ["🛍️", "Salesperson Mode", "style"],
-
     ["😂", "Meme Mode", "style"],
-
     ["🚫", "Forbidden Words", "forbidden"],
-
     ["🎭", "Act It Out", "act"],
-
     ["⚡", "Speed Mode", "speed"],
-
     ["🐌", "Slow Mode", "slow"],
-
     ["💀", "Drama Mode", "style"],
-
     ["🕵️", "Detective Mode", "style"],
-
     ["🔄", "Reverse Mode", "reverse"],
-
     ["3️⃣", "Three Words", "limited"],
-
     ["🙅", "No Gestures", "style"],
-
     ["🫁", "One Breath", "style"]
-
 ];
 
 
-/* =========================
+/* =========================================================
    HELPER
-========================= */
+========================================================= */
 
 function $(id) {
-
     return document.getElementById(id);
-
 }
 
 
-/* =========================
+/* =========================================================
    RANDOM QUESTION
-========================= */
+========================================================= */
 
 function getRandomQuestion() {
 
-    return QUESTIONS[
-        Math.floor(
-            Math.random() * QUESTIONS.length
-        )
-    ];
+    if (!QUESTIONS || QUESTIONS.length === 0) {
+        console.error("QUESTIONS array is empty or missing.");
+        return null;
+    }
 
+    return QUESTIONS[
+        Math.floor(Math.random() * QUESTIONS.length)
+    ];
 }
 
 
-/* =========================
+/* =========================================================
    RANDOM TWIST
-========================= */
+========================================================= */
 
 function getRandomTwist() {
 
     return twists[
-        Math.floor(
-            Math.random() * twists.length
-        )
+        Math.floor(Math.random() * twists.length)
     ];
-
 }
 
 
-/* =========================
+/* =========================================================
    START GAME
-========================= */
+========================================================= */
 
 function startGame() {
 
     clearInterval(game.timer);
 
     game.round = 1;
-
     game.score = 0;
-
     game.shields = 1;
-
     game.doublePoints = false;
+    game.selectedOption = null;
 
     renderRound();
-
 }
 
 
-/* =========================
+/* =========================================================
    RENDER ROUND
-========================= */
+========================================================= */
 
 function renderRound() {
 
     clearInterval(game.timer);
 
     if (game.round > rounds.length) {
-
         finishGame();
-
         return;
     }
 
-    const round = rounds[
-        game.round - 1
-    ];
+    const round = rounds[game.round - 1];
 
     game.time = round.time;
+    game.question = getRandomQuestion();
+    game.twist = getRandomTwist();
+    game.selectedOption = null;
 
-    game.question =
-        getRandomQuestion();
+    if (!game.question) {
+        $("content").innerHTML = `
+            <div class="hero">
+                <h1>ERROR 😭</h1>
+                <p class="muted">
+                    Questions could not be loaded.
+                </p>
+            </div>
+        `;
+        return;
+    }
 
-    game.twist =
-        getRandomTwist();
 
+    /* -----------------------------------------------------
+       CREATE MCQ OPTIONS
+    ----------------------------------------------------- */
+
+    const optionLetters = ["A", "B", "C", "D"];
+
+    const optionsHTML = game.question.options
+        .map((option, index) => {
+
+            return `
+                <button
+                    class="option-btn"
+                    id="option-${index}"
+                    onclick="selectOption(${index})"
+                >
+                    <span class="option-letter">
+                        ${optionLetters[index]}
+                    </span>
+
+                    <span class="option-text">
+                        ${option}
+                    </span>
+                </button>
+            `;
+
+        })
+        .join("");
+
+
+    /* -----------------------------------------------------
+       GAME SCREEN
+    ----------------------------------------------------- */
 
     $("content").innerHTML = `
 
         <div class="card">
 
             <div class="score">
-
-                🏆 Score:
-                ${game.score}
-
+                🏆 Score: ${game.score}
             </div>
 
             <p class="muted">
-
-                Round
-                ${game.round}
-                /
-                ${rounds.length}
-
+                Round ${game.round} / ${rounds.length}
             </p>
 
             <h2 class="round-title">
-
                 ${round.name}
-
             </h2>
-
 
             <div
                 class="timer"
                 id="timer"
             >
-
                 ${game.time}
-
             </div>
 
+
+            <!-- TWIST -->
 
             <div class="twist">
 
@@ -237,6 +236,8 @@ function renderRound() {
             </div>
 
 
+            <!-- QUESTION -->
+
             <div class="question">
 
                 ${game.question.q}
@@ -244,12 +245,16 @@ function renderRound() {
             </div>
 
 
-            <input
-                id="answerInput"
-                placeholder="Type your answer..."
-                autocomplete="off"
-            >
+            <!-- MCQ OPTIONS -->
 
+            <div class="options-container">
+
+                ${optionsHTML}
+
+            </div>
+
+
+            <!-- ACTIONS -->
 
             <div class="actions">
 
@@ -257,28 +262,19 @@ function renderRound() {
                     class="primary"
                     onclick="submitAnswer()"
                 >
-
                     SUBMIT 🚀
-
                 </button>
-
 
                 <button
                     onclick="useShield()"
                 >
-
-                    🛡️ Shield
-                    (${game.shields})
-
+                    🛡️ Shield (${game.shields})
                 </button>
-
 
                 <button
                     onclick="activateDouble()"
                 >
-
                     ✨ Double Points
-
                 </button>
 
             </div>
@@ -288,39 +284,65 @@ function renderRound() {
     `;
 
 
-    $("answerInput").focus();
+    /* -----------------------------------------------------
+       START TIMER
+    ----------------------------------------------------- */
 
-
-    game.timer =
-        setInterval(
-            updateTimer,
-            1000
-        );
-
+    game.timer = setInterval(
+        updateTimer,
+        1000
+    );
 }
 
 
-/* =========================
+/* =========================================================
+   SELECT MCQ OPTION
+========================================================= */
+
+function selectOption(index) {
+
+    game.selectedOption = index;
+
+
+    /* Remove selection from every option */
+
+    document
+        .querySelectorAll(".option-btn")
+        .forEach(button => {
+
+            button.classList.remove("selected");
+
+        });
+
+
+    /* Highlight selected option */
+
+    const selected = $(`option-${index}`);
+
+    if (selected) {
+        selected.classList.add("selected");
+    }
+}
+
+
+/* =========================================================
    TIMER
-========================= */
+========================================================= */
 
 function updateTimer() {
 
     game.time--;
 
-    const timer =
-        $("timer");
+    const timer = $("timer");
 
     if (timer) {
 
-        timer.textContent =
-            game.time;
+        timer.textContent = game.time;
+
 
         if (game.time <= 10) {
 
-            timer.classList.add(
-                "danger"
-            );
+            timer.classList.add("danger");
 
         }
 
@@ -329,50 +351,58 @@ function updateTimer() {
 
     if (game.time <= 0) {
 
+        clearInterval(game.timer);
+
         timeout();
 
     }
-
 }
 
 
-/* =========================
+/* =========================================================
    DOUBLE POINTS
-========================= */
+========================================================= */
 
 function activateDouble() {
 
+    if (game.doublePoints) {
+
+        alert(
+            "✨ Double Points are already active!"
+        );
+
+        return;
+    }
+
+
     game.doublePoints = true;
+
 
     alert(
         "✨ DOUBLE POINTS ACTIVATED!"
     );
-
 }
 
 
-/* =========================
+/* =========================================================
    SHIELD
-========================= */
+========================================================= */
 
 function useShield() {
 
     if (game.shields <= 0) {
 
         alert(
-            "No shields left!"
+            "🛡️ No shields left!"
         );
 
         return;
-
     }
 
 
     game.shields--;
 
-    clearInterval(
-        game.timer
-    );
+    clearInterval(game.timer);
 
 
     $("content").innerHTML = `
@@ -388,109 +418,82 @@ function useShield() {
             </h1>
 
             <p class="muted">
-
-                Your team skipped
-                this challenge safely.
-
+                Your team skipped this challenge safely.
             </p>
 
+            <p>
+                Shields remaining:
+                <strong>${game.shields}</strong>
+            </p>
 
             <button
                 class="primary"
                 onclick="nextRound()"
             >
-
                 CONTINUE →
-
             </button>
 
         </div>
 
     `;
-
 }
 
 
-/* =========================
+/* =========================================================
    SUBMIT ANSWER
-========================= */
+========================================================= */
 
 function submitAnswer() {
 
-    const input =
-        $("answerInput");
+    /* No option selected */
 
-    if (!input) return;
+    if (game.selectedOption === null) {
 
-
-    const userAnswer =
-        input.value.trim();
-
-
-    if (userAnswer.length < 1) {
+        alert(
+            "Bro 😭 select an option first!"
+        );
 
         return;
-
     }
 
+
+    clearInterval(game.timer);
+
+
+    /* Get selected answer */
+
+    const userAnswer =
+        game.question.options[
+            game.selectedOption
+        ];
+
+
+    /* Correct answer from questions.js */
+
+    const correctAnswer =
+        String(game.question.a).trim();
+
+
+    /* Compare */
 
     const correct =
-        String(
-            game.question.a
-        ).toLowerCase();
+        userAnswer.trim().toLowerCase()
+        ===
+        correctAnswer.toLowerCase();
 
 
-    const given =
-        userAnswer.toLowerCase();
-
-
-    let correctAnswer =
-
-        given === correct ||
-
-        given.includes(correct) ||
-
-        correct.includes(given);
-
-
-    /* FINAL BOSS */
-
-    if (
-        game.round === 6
-    ) {
-
-        correctAnswer =
-            userAnswer.length >= 30;
-
-    }
-
-
-    /* FORBIDDEN WORD */
-
-    if (
-
-        game.twist[2] ===
-        "forbidden"
-
-        &&
-
-        /(ai|computer|technology)/i
-        .test(userAnswer)
-
-    ) {
-
-        correctAnswer = false;
-
-    }
-
+    /* -----------------------------------------------------
+       BONUS POINTS
+    ----------------------------------------------------- */
 
     let bonus = 0;
 
 
+    /* Style twists */
+
     if (
-        correctAnswer &&
-        game.twist[2] ===
-        "style"
+        correct &&
+        game.twist[2] === "style"
     ) {
 
         bonus += 50;
@@ -498,15 +501,12 @@ function submitAnswer() {
     }
 
 
+    /* Speed Mode */
+
     if (
-
-        game.twist[2] ===
-        "speed"
-
-        &&
-
-        game.time < 30
-
+        correct &&
+        game.twist[2] === "speed" &&
+        game.time >= 20
     ) {
 
         bonus += 70;
@@ -514,18 +514,11 @@ function submitAnswer() {
     }
 
 
+    /* Three Words */
+
     if (
-
-        game.twist[2] ===
-        "limited"
-
-        &&
-
-        userAnswer
-            .split(/\s+/)
-            .filter(Boolean)
-            .length <= 3
-
+        correct &&
+        game.twist[2] === "limited"
     ) {
 
         bonus += 100;
@@ -533,9 +526,11 @@ function submitAnswer() {
     }
 
 
+    /* Act It Out */
+
     if (
-        game.twist[2] ===
-        "act"
+        correct &&
+        game.twist[2] === "act"
     ) {
 
         bonus += 50;
@@ -543,9 +538,11 @@ function submitAnswer() {
     }
 
 
+    /* Reverse Mode */
+
     if (
-        game.twist[2] ===
-        "reverse"
+        correct &&
+        game.twist[2] === "reverse"
     ) {
 
         bonus += 50;
@@ -553,15 +550,18 @@ function submitAnswer() {
     }
 
 
-    let points =
-        correctAnswer
-            ? 100
-            : 0;
+    /* -----------------------------------------------------
+       BASE POINTS
+    ----------------------------------------------------- */
+
+    let points = correct
+        ? 100
+        : 0;
 
 
-    if (
-        game.doublePoints
-    ) {
+    /* Double points */
+
+    if (game.doublePoints) {
 
         points *= 2;
 
@@ -571,28 +571,28 @@ function submitAnswer() {
     points += bonus;
 
 
+    /* Add score */
+
     game.score += points;
 
-    game.doublePoints =
-        false;
+
+    /* Reset double points */
+
+    game.doublePoints = false;
 
 
-    clearInterval(
-        game.timer
-    );
-
+    /* Show result */
 
     showResult(
-        correctAnswer,
+        correct,
         points
     );
-
 }
 
 
-/* =========================
+/* =========================================================
    SHOW RESULT
-========================= */
+========================================================= */
 
 function showResult(
     correct,
@@ -605,8 +605,12 @@ function showResult(
 
     const explanation =
         game.question.explanation ||
-        "This is the expected answer for this challenge.";
+        "This is the expected answer.";
 
+
+    /* -----------------------------------------------------
+       CORRECT
+    ----------------------------------------------------- */
 
     if (correct) {
 
@@ -614,42 +618,27 @@ function showResult(
 
             <div class="hero">
 
-                <div style="
-                    font-size:70px
-                ">
-
+                <div style="font-size:70px">
                     🔥
-
                 </div>
-
 
                 <h1>
                     CORRECT!
                 </h1>
 
-
                 <h2>
-
-                    +${points}
-                    POINTS
-
+                    +${points} POINTS
                 </h2>
 
-
                 <p class="muted">
-
                     ${explanation}
-
                 </p>
-
 
                 <button
                     class="primary"
                     onclick="nextRound()"
                 >
-
                     CONTINUE →
-
                 </button>
 
             </div>
@@ -657,6 +646,11 @@ function showResult(
         `;
 
     }
+
+
+    /* -----------------------------------------------------
+       WRONG
+    ----------------------------------------------------- */
 
     else {
 
@@ -664,19 +658,13 @@ function showResult(
 
             <div class="hero">
 
-                <div style="
-                    font-size:70px
-                ">
-
+                <div style="font-size:70px">
                     💀
-
                 </div>
-
 
                 <h1>
                     NOT QUITE!
                 </h1>
-
 
                 <div class="answer">
 
@@ -684,32 +672,21 @@ function showResult(
                         ✅ CORRECT ANSWER
                     </h3>
 
-
-                    <div
-                        class="answer-text"
-                    >
-
+                    <div class="answer-text">
                         ${answer}
-
                     </div>
 
-
                     <p class="muted">
-
                         ${explanation}
-
                     </p>
 
                 </div>
-
 
                 <button
                     class="primary"
                     onclick="nextRound()"
                 >
-
                     CONTINUE →
-
                 </button>
 
             </div>
@@ -717,20 +694,19 @@ function showResult(
         `;
 
     }
-
 }
 
 
-/* =========================
+/* =========================================================
    TIMEOUT
-========================= */
+========================================================= */
 
 function timeout() {
 
-    clearInterval(
-        game.timer
-    );
+    clearInterval(game.timer);
 
+
+    /* Shield automatically saves the round */
 
     if (game.shields > 0) {
 
@@ -741,27 +717,17 @@ function timeout() {
 
             <div class="hero">
 
-                <div style="
-                    font-size:70px
-                ">
-
+                <div style="font-size:70px">
                     🛡️
-
                 </div>
-
 
                 <h1>
                     TIME OUT!
                 </h1>
 
-
                 <p class="muted">
-
-                    Your shield saved
-                    the round.
-
+                    Your shield saved the round.
                 </p>
-
 
                 <div class="answer">
 
@@ -769,35 +735,24 @@ function timeout() {
                         ✅ CORRECT ANSWER
                     </h3>
 
-
-                    <div
-                        class="answer-text"
-                    >
-
+                    <div class="answer-text">
                         ${game.question.a}
-
                     </div>
 
-
                     <p class="muted">
-
                         ${
                             game.question.explanation ||
                             "This is the expected answer."
                         }
-
                     </p>
 
                 </div>
-
 
                 <button
                     class="primary"
                     onclick="nextRound()"
                 >
-
                     CONTINUE →
-
                 </button>
 
             </div>
@@ -805,6 +760,9 @@ function timeout() {
         `;
 
     }
+
+
+    /* No shield */
 
     else {
 
@@ -812,19 +770,13 @@ function timeout() {
 
             <div class="hero">
 
-                <div style="
-                    font-size:70px
-                ">
-
+                <div style="font-size:70px">
                     ⏰
-
                 </div>
-
 
                 <h1>
                     TIME OUT!
                 </h1>
-
 
                 <div class="answer">
 
@@ -832,35 +784,24 @@ function timeout() {
                         ✅ CORRECT ANSWER
                     </h3>
 
-
-                    <div
-                        class="answer-text"
-                    >
-
+                    <div class="answer-text">
                         ${game.question.a}
-
                     </div>
 
-
                     <p class="muted">
-
                         ${
                             game.question.explanation ||
                             "This is the expected answer."
                         }
-
                     </p>
 
                 </div>
-
 
                 <button
                     class="primary"
                     onclick="nextRound()"
                 >
-
                     CONTINUE →
-
                 </button>
 
             </div>
@@ -868,146 +809,113 @@ function timeout() {
         `;
 
     }
-
 }
 
 
-/* =========================
+/* =========================================================
    NEXT ROUND
-========================= */
+========================================================= */
 
 function nextRound() {
 
-    clearInterval(
-        game.timer
-    );
+    clearInterval(game.timer);
 
     game.round++;
 
     renderRound();
-
 }
 
 
-/* =========================
-   FINISH
-========================= */
+/* =========================================================
+   FINISH GAME
+========================================================= */
 
 function finishGame() {
 
-    clearInterval(
-        game.timer
-    );
+    clearInterval(game.timer);
 
 
     $("content").innerHTML = `
 
         <div class="hero">
 
-            <div style="
-                font-size:90px
-            ">
-
+            <div style="font-size:90px">
                 🏆
-
             </div>
-
 
             <h1>
                 ARENA COMPLETE!
             </h1>
 
-
             <h2>
-
                 FINAL SCORE:
                 ${game.score}
-
             </h2>
 
-
             <p class="muted">
-
-                You survived
-                CarbonVScode.
-
+                You survived CarbonVScode.
             </p>
-
 
             <button
                 class="primary"
                 onclick="startGame()"
             >
-
                 PLAY AGAIN 🚀
-
             </button>
+
+        </div>
+
+    `;
+}
+
+
+/* =========================================================
+   START SCREEN
+========================================================= */
+
+if ($("content")) {
+
+    $("content").innerHTML = `
+
+        <div class="hero">
+
+            <div style="font-size:90px">
+                ⚡
+            </div>
+
+            <h1>
+                CarbonVScode
+            </h1>
+
+            <p class="muted">
+                COMPETE • CREATE • THINK • CHAOS
+            </p>
+
+            <div class="card">
+
+                <h2>
+                    READY?
+                </h2>
+
+                <p class="muted">
+                    600 challenges.
+                    Random twists.
+                    Time pressure.
+                    Risk.
+                    Chaos.
+                </p>
+
+                <button
+                    class="primary"
+                    onclick="startGame()"
+                >
+                    ENTER THE ARENA 🚀
+                </button>
+
+            </div>
 
         </div>
 
     `;
 
 }
-
-
-/* =========================
-   START SCREEN
-========================= */
-
-$("content").innerHTML = `
-
-    <div class="hero">
-
-        <div style="
-            font-size:90px
-        ">
-
-            ⚡
-
-        </div>
-
-
-        <h1>
-            CarbonVScode
-        </h1>
-
-
-        <p class="muted">
-
-            COMPETE • CREATE • THINK • CHAOS
-
-        </p>
-
-
-        <div class="card">
-
-            <h2>
-                READY?
-            </h2>
-
-
-            <p class="muted">
-
-                600 challenges.
-                Random twists.
-                Time pressure.
-                Risk.
-                Chaos.
-
-            </p>
-
-
-            <button
-                class="primary"
-                onclick="startGame()"
-            >
-
-                ENTER THE ARENA 🚀
-
-            </button>
-
-        </div>
-
-    </div>
-
-`;

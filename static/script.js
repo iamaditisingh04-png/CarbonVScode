@@ -20,7 +20,6 @@ let game = {
     doublePoints: false
 };
 
-
 /* =========================================================
    ROUND SETTINGS
 ========================================================= */
@@ -130,6 +129,63 @@ function startGame() {
     game.selectedOption = null;
 
     renderRound();
+    saveGameState();
+}
+
+/* =========================================================
+   SAVE / RESTORE GAME STATE
+========================================================= */
+
+function saveGameState() {
+
+    localStorage.setItem(
+        "carbonVScodeGame",
+        JSON.stringify(game)
+    );
+
+}
+
+
+function loadGameState() {
+
+    const saved =
+        localStorage.getItem("carbonVScodeGame");
+
+    if (!saved) {
+        return false;
+    }
+
+    try {
+
+        const savedGame =
+            JSON.parse(saved);
+
+        game = savedGame;
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "Could not restore game:",
+            error
+        );
+
+        localStorage.removeItem(
+            "carbonVScodeGame"
+        );
+
+        return false;
+    }
+}
+
+
+function clearGameState() {
+
+    localStorage.removeItem(
+        "carbonVScodeGame"
+    );
+
 }
 
 
@@ -180,6 +236,7 @@ function renderRound() {
                     class="option-btn"
                     id="option-${index}"
                     onclick="selectOption(${index})"
+                    saveGameState();
                 >
                     <span class="option-letter">
                         ${optionLetters[index]}
@@ -273,6 +330,7 @@ function renderRound() {
 
                 <button
                     onclick="activateDouble()"
+                    saveGameState();
                 >
                     ✨ Double Points
                 </button>
@@ -291,7 +349,9 @@ function renderRound() {
     game.timer = setInterval(
         updateTimer,
         1000
+    
     );
+    saveGameState();
 }
 
 
@@ -390,6 +450,7 @@ function activateDouble() {
 
 function useShield() {
 
+saveGameState();
     if (game.shields <= 0) {
 
         alert(
@@ -593,24 +654,18 @@ function submitAnswer() {
 /* =========================================================
    SHOW RESULT
 ========================================================= */
+    
+function showResult(correct, points) {
 
-function showResult(
-    correct,
-    points
-) {
+    const correctAnswer = game.question.a;
 
-    const answer =
-        game.question.a;
-
+    const selectedAnswer =
+        game.question.options[game.selectedOption];
 
     const explanation =
         game.question.explanation ||
         "This is the expected answer.";
 
-
-    /* -----------------------------------------------------
-       CORRECT
-    ----------------------------------------------------- */
 
     if (correct) {
 
@@ -645,35 +700,36 @@ function showResult(
 
         `;
 
-    }
-
-
-    /* -----------------------------------------------------
-       WRONG
-    ----------------------------------------------------- */
-
-    else {
+    } else {
 
         $("content").innerHTML = `
 
             <div class="hero">
 
                 <div style="font-size:70px">
-                    💀
+                    ❌
                 </div>
 
                 <h1>
-                    NOT QUITE!
+                    WRONG ANSWER
                 </h1>
 
                 <div class="answer">
+
+                    <h3>
+                        YOUR ANSWER
+                    </h3>
+
+                    <div class="answer-text">
+                        ${selectedAnswer}
+                    </div>
 
                     <h3>
                         ✅ CORRECT ANSWER
                     </h3>
 
                     <div class="answer-text">
-                        ${answer}
+                        ${correctAnswer}
                     </div>
 
                     <p class="muted">
@@ -692,10 +748,8 @@ function showResult(
             </div>
 
         `;
-
     }
 }
-
 
 /* =========================================================
    TIMEOUT
@@ -823,6 +877,7 @@ function nextRound() {
     game.round++;
 
     renderRound();
+    saveGameState();
 }
 
 
@@ -917,5 +972,71 @@ if ($("content")) {
         </div>
 
     `;
+
+}
+const hasSavedGame = loadGameState();
+
+if (hasSavedGame && game.round > 0 && game.round <= rounds.length) {
+
+    $("content").innerHTML = `
+
+        <div class="hero">
+
+            <div style="font-size:80px">
+                🔄
+            </div>
+
+            <h1>
+                WELCOME BACK!
+            </h1>
+
+            <p class="muted">
+                Your previous game was saved.
+            </p>
+
+            <h2>
+                Round ${game.round}
+            </h2>
+
+            <h3>
+                Score: ${game.score}
+            </h3>
+
+            <div class="actions">
+
+                <button
+                    class="primary"
+                    onclick="resumeGame()"
+                >
+                    RESUME GAME 🚀
+                </button>
+
+                <button
+                    onclick="startNewGame()"
+                >
+                    START NEW GAME
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+
+} else {
+
+    showStartScreen();
+
+}
+function resumeGame() {
+
+    renderRound();
+
+}
+function startNewGame() {
+
+    clearGameState();
+
+    startGame();
 
 }

@@ -974,6 +974,51 @@ if ($("content")) {
     `;
 
 }
+function showStartScreen() {
+
+    $("content").innerHTML = `
+
+        <div class="hero">
+
+            <div style="font-size:90px">
+                ⚡
+            </div>
+
+            <h1>
+                CarbonVScode
+            </h1>
+
+            <p class="muted">
+                COMPETE • CREATE • THINK • CHAOS
+            </p>
+
+            <div class="card">
+
+                <h2>
+                    READY?
+                </h2>
+
+                <p class="muted">
+                    600 challenges.
+                    Random twists.
+                    Time pressure.
+                    Risk.
+                    Chaos.
+                </p>
+
+                <button
+                    class="primary"
+                    onclick="startGame()"
+                >
+                    ENTER THE ARENA 🚀
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+}
 const hasSavedGame = loadGameState();
 
 if (hasSavedGame && game.round > 0 && game.round <= rounds.length) {
